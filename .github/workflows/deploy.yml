@@ -1,0 +1,96 @@
+name: Deploy to FTP Server
+
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    branches:
+      - 'master'
+    types: [opened, synchronize, reopened, labeled]
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      GIT_INFO_FILE: .currently_deployed
+      DEPLOY_TO_PROD_IF: ${{ github.ref == 'refs/heads/master' }}
+      PRE_DEPLOYMENT_URL: /api/pre-deployment
+      POST_DEPLOYMENT_URL: /api/post-deployment
+      FTP_EXCLUDE_LIST: |
+        **/.git*
+        **/.git*/**
+        **/node_modules/**
+        *.md
+        LICENSE
+        *.sh
+        docker/**
+        *.config.js
+        .devcontainer/**
+        .env
+        .env.*
+        .editorconfig
+        **/docker-compose.yml
+        jsconfig.json
+        package-lock.json
+        package.json
+        phpcs.xml
+        phpunit.xml
+        public/hot
+        response.json
+        tests
+
+    steps:
+      - name: 🚀 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📥 Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+        # zero byte files were causing FTP errors on all-inkl, but not on other FTP-servers
+      - name: 🛠️ Workaround - add space to zero byte files to solve FTP errors
+        run: find . -type d -path './node_modules' -prune -o -type f -size 0 -exec sh -c 'echo "Adding space to $1" && echo " " >> "$1"' _ {} \;
+
+      - name: 📝 Create ${{ env.GIT_INFO_FILE }} file with git info
+        run: |
+          echo "<pre>" > ${{ env.GIT_INFO_FILE }}
+          git log -2 >> ${{ env.GIT_INFO_FILE }}
+          echo "" >> ${{ env.GIT_INFO_FILE }}
+          echo "Deployed at: $(date)" >> ${{ env.GIT_INFO_FILE }}
+
+          if [[ $GITHUB_EVENT_NAME == 'pull_request' ]]; then
+            echo "PR: Yes" >> ${{ env.GIT_INFO_FILE }}
+            echo "Branch: $GITHUB_HEAD_REF" >> ${{ env.GIT_INFO_FILE }}
+            echo "Target Branch: $GITHUB_BASE_REF" >> ${{ env.GIT_INFO_FILE }}
+            PR_URL=$(jq -r ".pull_request.html_url" $GITHUB_EVENT_PATH)
+            echo "PR URL: $PR_URL" >> ${{ env.GIT_INFO_FILE }}
+          else
+            echo "PR: No" >> ${{ env.GIT_INFO_FILE }}
+            echo "Branch: $GITHUB_REF_NAME" >> ${{ env.GIT_INFO_FILE }}
+          fi
+
+          # Link zum GitHub Action-Lauf
+          ACTION_RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          echo "Action Run URL: $ACTION_RUN_URL" >> ${{ env.GIT_INFO_FILE }}
+          
+          echo "</pre>" >> ${{ env.GIT_INFO_FILE }}
+          cat ${{ env.GIT_INFO_FILE }}
+
+      - name: 📂 Sync files to PROD
+        if: ${{ env.DEPLOY_TO_PROD_IF == 'true' }}
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST_PROD }}
+          username: ${{ secrets.FTP_USER_PROD }}
+          password: ${{ secrets.FTP_PASS_PROD }}
+          server-dir: /
+          protocol: ftps
+          exclude: ${{ env.FTP_EXCLUDE_LIST }}
