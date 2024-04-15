@@ -10,13 +10,13 @@ define('title', 'JCNetwork URL Shortener');
 define('shortTitle', 'JCNetwork');
 
 // A description of your site, shown on the homepage.
-define('description', 'JCNET.WORK ist der Link Kürzer des JCNetwork e.V. Er ermöglicht das Verkürzen von Links, das nachträgliche Bearbeiten, sowie das Generieren von Statistiken und QR-Codes. Die Verwendung ist ausschließlich für verbandsnahe Zwecke erlaubt. Keine Haftung für externe Inhalte.'); 
+define('description', 'Die Verwendung dieses "url shorteners" ist ausschließlich für verbandsnahe Zwecke erlaubt. Keine Haftung für externe Inhalte.'); 
 
 // The favicon for your site
 define('favicon', '/frontend/assets/img/favicon.ico');
 
 // Logo for your site, displayed on home page
-define('logo', '/frontend/assets/img/logo-portraits.jpg');
+define('logo', '/frontend/assets/img/logo.png');
 
 // Enable reCAPTCHA V3
 // It is highly recommended you use reCAPTCHA V3. It will stop spam. You can get a site and secret key from here: https://www.google.com/recaptcha/admin/create
@@ -53,7 +53,7 @@ $footerLinks = [
     "Website" =>  "https://jcnetwork.de/",
     "Impressum" =>  "https://jcnetwork.de/impressum/",
     "Datenschutz"   =>  "https://jcnetwork.de/datenschutzerklaerung/",
-    "Admin"   =>  "/admin"
+    // "Admin"   =>  "/admin"
 ];
 
 ?>
